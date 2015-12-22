@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import math
+import copy
 
 
 # Helping function for find_squares. Taken from OpenCV samples gallery
@@ -21,6 +23,40 @@ def find_squares(contours):
                 squares.append(np.float32(cnt))
     return squares
 
+# Order must be top-left, top-right, bottom-right, bottom-left, corresponding to the "object_points"
+def orient_square2(s):
+    s1 = map(tuple, s)
+    xs = 1.0 * sum(map(lambda p: p[0], s)) / len(s)
+    ys = 1.0 * sum(map(lambda p: p[1], s)) / len(s)
+    s1.sort(key=lambda (x, y): math.atan2(y - ys, x - xs))
+    return np.float32(map(list, s1))
+
+# draw 3d figure over the found square
+def draw_things(rvec, tvec, cam_matrix, dist_coefs):
+    COLOR_FRAME  = [0, 255, 0]
+    COLOR_MARKER = [0, 255, 255]
+    side_w = 0.5
+    dx, dy, dz = 0 - (side_w /2.0), 0 - (side_w /2.0), 0 - (side_w /2.0)
+
+    shift_v = lambda v: [v[0] + dx, v[1] + dy, v[2] + dz]
+
+    sides = []
+    base = [[0, 0], [side_w, 0], [side_w, side_w], [0.0, side_w]]
+    for i in xrange(3):
+        for c in [0, side_w]:
+            sides.append(map(shift_v, [ v[:i] + [c] + v[i:] for v in base]))
+
+    for i in xrange(len(sides)):
+        proj, _ = cv2.projectPoints(np.float32(sides[i]), rvec, tvec, cam_matrix, dist_coefs)
+        proj = np.int32(map(lambda x: x[0], proj))
+        cv2.polylines(frame, [proj], True, COLOR_FRAME)
+
+    # draw marker on front side of cube
+    front_side_marker = map(shift_v, [[0.0, side_w / 2.0, side_w], [side_w, side_w / 2.0, side_w],
+                                      [side_w / 2.0, 0.0, side_w], [side_w / 2.0, side_w, side_w]])
+    proj, _ = cv2.projectPoints(np.float32(front_side_marker), rvec, tvec, cam_matrix, dist_coefs)
+    proj = np.int32(map(lambda x: x[0], proj))
+    cv2.polylines(frame, [proj], True, COLOR_MARKER)
 
 # Reading the camera calibration info
 calibrated_data = np.load('camera_info.npz')
@@ -31,15 +67,17 @@ red = (0, 0, 255)
 
 video_capture = cv2.VideoCapture(0)
 
+object_points = np.float32([[-1, -1, 0], [-1, 1, 0], [1, 1, 0], [1, -1, 0]])  # ARE THOSE THE RIGHT VALUES?
+
 while True:
     # Capture frame-by-frame
-    ret, frame = video_capture.read()
+    _, frame = video_capture.read()
     # To grayscale
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # Adding a bit of blur
     blurred_gray_image = cv2.blur(gray_frame, (5, 5))
     # Thresholding an image
-    ret, threshold_image = cv2.threshold(blurred_gray_image, 128.0, 255.0, cv2.THRESH_OTSU)
+    _, threshold_image = cv2.threshold(blurred_gray_image, 128.0, 255.0, cv2.THRESH_OTSU)
     # Retrieving countours
     contours, hierarchy = cv2.findContours(threshold_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     # Only square contours are interesting to us
@@ -47,10 +85,10 @@ while True:
 
     # This beauty allows to calculate rvec & tvec matrixes
     if len(square_contours) > 0:
-        object_points = np.float32([[-1, 1, 0], [-1, 1, 0], [1, 1, 0], [1, -1, 0]])  # ARE THOSE THE RIGHT VALUES?
-        rvec = np.float32([])
-        tvec = np.float32([])
-        ret, rvec, tvec = cv2.solvePnP(object_points, square_contours[0], cam_matrix, dist_coefs, rvec, tvec)
+        # Assume that first square in list is our target
+        orien = orient_square2(square_contours[0])
+        _, rvec, tvec = cv2.solvePnP(object_points, orien, cam_matrix, dist_coefs)
+        draw_things(rvec, tvec, cam_matrix, dist_coefs)
 
     # Drawing ALL found square contours on image
     cv2.drawContours(frame, np.int32(square_contours), -1, red, 2)

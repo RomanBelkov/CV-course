@@ -19,7 +19,7 @@ def find_squares(contours):
         if len(cnt) == 4 and cv2.contourArea(cnt) > 1000 and cv2.isContourConvex(cnt):
             cnt = cnt.reshape(-1, 2)
             max_cos = np.max([angle_cos(cnt[i], cnt[(i + 1) % 4], cnt[(i + 2) % 4]) for i in xrange(4)])
-            if max_cos < 0.1:
+            if max_cos < 0.5:
                 squares.append(np.float32(cnt))
     return squares
 
@@ -67,8 +67,7 @@ red = (0, 0, 255)
 
 video_capture = cv2.VideoCapture(0)
 
-object_points = np.float32([[-1, -1, 0], [-1, 1, 0], [1, 1, 0], [1, -1, 0]])  # ARE THOSE THE RIGHT VALUES?
-
+object_points = np.float32([[-0.5, -0.5, 0], [-0.5, 0.5, 0], [0.5, 0.5, 0], [0.5, -0.5, 0]])  # ARE THOSE THE RIGHT VALUES?
 while True:
     # Capture frame-by-frame
     _, frame = video_capture.read()

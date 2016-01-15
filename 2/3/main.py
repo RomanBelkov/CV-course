@@ -14,7 +14,9 @@ def normalize(x):
 
 half_side = 10
 
-k = np.matrix(((100, 0, 300, 0), (0, 100, 300, 0), (0, 0, 1, 0)))
+k = np.matrix(((100, 0, 300, 0),
+               (0, 100, 300, 0),
+               (0, 0, 1, 0)))
 
 a = math.pi / 4 + math.pi / 2
 

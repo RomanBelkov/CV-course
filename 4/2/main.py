@@ -56,7 +56,7 @@ def calc_error(res):
     return sum / points_num
 
 
-def conv(x):
+def residuals(x):
     res = np.empty(points_num * 2)
     r = cv2.Rodrigues(x[0:3])[0]
     temp = np.zeros((points_num, 3))
@@ -64,13 +64,12 @@ def conv(x):
     for i in range(0, points_num):
         y = np.dot(k, np.add(np.dot(r, temp[i]), x[3:6]))
         res[2 * i: 2 * i + 2] = np.array([new_coord[i][0] - y[0] / y[2], new_coord[i][1] - y[1] / y[2]])
-    # print('-------------------------RES-------------------------')
-    # print(res)
     return res
 
 
 output_file = open('output.txt', 'w')
 for points_num in range(4, 9):
-    output_file.write("%s\n" % calc_error(leastsq(conv, p)[0]))
+    print(leastsq(residuals, p)[0])
+    output_file.write("%s\n" % calc_error(leastsq(residuals, p)[0]))
 
 output_file.close()

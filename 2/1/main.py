@@ -2,13 +2,8 @@ import numpy as np
 import cv2
 
 img = cv2.imread('image.jpg')
+cv2.imshow('Base image', img)
 rows, cols = img.shape[:2]
-
-
-def show(image):
-    cv2.imshow('Image', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 def process_warp_affine((x1, y1), (x2, y2), (x3, y3), (x4, y4)):
@@ -21,17 +16,27 @@ def process_warp_affine((x1, y1), (x2, y2), (x3, y3), (x4, y4)):
 def process_remap((x1, y1), (x2, y2), (x3, y3), (x4, y4)):
     map_x = np.ndarray((rows, cols), dtype='float32')
     map_y = np.ndarray((rows, cols), dtype='float32')
-    init_width       = float(x2 - x1)
-    processed_width  = float(x4 - x3)
-    init_height      = float(y2 - y1)
-    processed_height = float(y4 - y3)
-    for i in xrange(rows):
-        for j in xrange(cols):
-            map_x[i, j] = x1 + float(j - x3) * (init_width / processed_width)
-            map_y[i, j] = y1 + float(i - y3) * (init_height / processed_height)
+    init_width       = x2 - x1
+    init_height      = y2 - y1
+    processed_width  = x4 - x3
+    processed_height = y4 - y3
+    for i in range(rows):
+        for j in range(cols):
+            map_x[i, j] = x1 + (j - x3) * (init_width / processed_width)
+            map_y[i, j] = y1 + (i - y3) * (init_height / processed_height)
     return cv2.remap(img, map_x, map_y, cv2.INTER_LINEAR)
 
 
-# show(process_warp_affine((0, 0), (200, 200), (100, 200), (230, 230)))
-# show(process_remap((0, 0), (200, 200), (100, 200), (230, 230)))
+cv2.imshow('WA', process_warp_affine((50., 50.), (400., 400.), (50., 470.), (400., 200.)))
+cv2.imshow('RMP', process_remap((50., 50.), (400., 400.), (50., 470.), (400., 200.)))
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+
+
+
+
+
 
